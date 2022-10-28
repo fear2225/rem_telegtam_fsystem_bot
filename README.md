@@ -1,24 +1,24 @@
-# Remote access to the file system via telegram  
-## Content table  
+# Remote access to the file system via Telegram Messager  
+## Table of Contents  
 1 Description  
 2 Supported commands  
 3 Installation guide  
 4 Config.txt parameters  
 
-## 1 Descripton  
-A telegram bot script that provides access to the computer's file system within the root directory. Remote shutdown of the bot and whitelist is available.
+## 1 Description  
+A Telegram bot script that provides access to the computer's file system within the root directory. Also, remote shutdown of the bot and whitelist are available.
 ---  
 
-## 2 Supported command  
+## 2 Supported commands  
 /start - start and show your user id  
 /help - show help  
 /root - go to root directory  
 /ver - version of bot  
 /list - whitelist  
-/off - shutdow bot  
+/off - shutdown bot  
 
 ## 3 Installation guide  
-To get bot token follow https://t.me/botfather  
+To get bot token follow the link: https://t.me/botfather  
 ### Windows, using cmd  
 1. Upgrade pip  
 ```
@@ -42,8 +42,7 @@ python c:\path_to_main\main.py
 ## 4 Config.txt parameters  
 
 TOKEN=token input field  
-root=the directory you can't cog ouf of  
-max symbol in line=max symbols in inline telegram button (if file name longer than this number, it's take format:'werylongfi...name.example')  
+root=the directory you can't get out of  
+max symbol in line=max symbols in inline telegram button (if file name is longer than this number, it take format:'werylongfi...name.example')  
 max number of buttons=max number of inline buttons (not includes 'next' and 'up' buttons)  
-whitelist=leave blank, or print users id devided by ','  
-
+whitelist=leave blank, or print users` ids dvided by ','  
