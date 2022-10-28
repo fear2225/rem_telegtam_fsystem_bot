@@ -7,7 +7,7 @@
 
 ## 1 Descripton  
 A telegram bot script that provides access to the computer's file system within the root directory. Remote shutdown of the bot and whitelist is available.
----
+---  
 
 ## 2 Supported command  
 /start - start and show your user id  
@@ -18,6 +18,7 @@ A telegram bot script that provides access to the computer's file system within 
 /off - shutdow bot  
 
 ## 3 Installation guide  
+To get bot token follow https://t.me/botfather  
 ### Windows, using cmd  
 1. Upgrade pip  
 ```
