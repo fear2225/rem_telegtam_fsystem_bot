@@ -1,0 +1,5 @@
+TOKEN=token
+root=C:\Users\
+max symbols in line = 40
+max numbers of buttons = 8
+whitelist =
