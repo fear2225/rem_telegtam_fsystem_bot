@@ -1,5 +1,5 @@
-__version__ = '1.1.0'
-__author__ = 'SOV'
+__version__ = '1.2.0'
+__author__ = 'https://github.com/fear2225'
 __doc__ = '[*] Remote access to computer file system\n'\
         '[!] if you try to enter directories with restricted access,'\
         'it may cause an error, go back to the /root directory'\
@@ -17,11 +17,11 @@ __doc__ = '[*] Remote access to computer file system\n'\
 
 # Internal
 import asyncio
-from sys import exit
+import sys
 
 from pathlib import Path
 
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, executor
 from aiogram.types import Message, CallbackQuery
 from aiogram.types.input_file import InputFile
 from aiogram.types import InlineKeyboardMarkup as ilMarkup, InlineKeyboardButton as ilButton
@@ -32,8 +32,9 @@ from aiogram.types import InlineKeyboardMarkup as ilMarkup, InlineKeyboardButton
 
 def config_unpack():
     '''unpack clear param in the order of their declaration'''
+    print(f'[*] main.py location: {sys.argv[0]}')
     _temp = []
-    with open('config.txt','r') as f:
+    with open(sys.argv[0][0:-7]+'config.txt','r') as f:
         for line in f:
             _temp.append(line.strip().split(sep='=', maxsplit=1)[1])
     return _temp
@@ -45,7 +46,6 @@ ROOT = Path(ROOT)
 FILE_NAME_WIDTH = int(FILE_NAME_WIDTH)
 N_BUTTONS = int(N_BUTTONS)
 work_path = ROOT
-print(f'token: {type(TOKEN)}, root: {ROOT}')
 TO_DEL = 0
 FILE_ROW = 0
 CALLBACK_LIST_TEMP = []
@@ -65,14 +65,13 @@ def WhiteList() -> None:
         WALIST[i] = WALIST[i].strip()
         if not (len(WALIST[i]) == 10):
             print('[!] Wrong parameters in whitelist')
-            exit()
+            sys.exit()
     return None
 
 
 def WhitelistCheck(*args) -> bool:
     global WALIST
     if WALIST == False:
-        print('asfadf')
         return True
 
     if args in WALIST:
@@ -127,7 +126,6 @@ def create_keyboard() -> ilMarkup:
     CALLBACK_LIST_TEMP = []
 
     ROW = len(paths_to_show)//N_BUTTONS
-    print(ROW, 'in', FILE_ROW)
     if  (ROW - FILE_ROW) <= 0:
         FILE_ROW = 0
 
@@ -136,7 +134,6 @@ def create_keyboard() -> ilMarkup:
 
         for i in paths_to_show[FILE_ROW*N_BUTTONS:(FILE_ROW+1)*N_BUTTONS]:
             i = nameShorts(text=i, max=FILE_NAME_WIDTH)
-            print(i)
             CALLBACK_LIST_TEMP.append(i[1])
             keyboard.add(ilButton(text=i[0], callback_data=poz))
             poz += 1
@@ -147,7 +144,6 @@ def create_keyboard() -> ilMarkup:
 
     keyboard.add(ilButton(text='^^^ UP ^^^', callback_data='/up'))
 
-    print(keyboard)
     return keyboard
 
 
@@ -172,13 +168,19 @@ async def to_del() -> None:
         print(f'[!] Failed to delete message: {type(TO_DEL)}\n{TO_DEL}')
 
 
-@dp.message_handler(commands=['start', 'root', 'help', 'list', 'ver'])
+@dp.message_handler(commands=['start', 'root', 'help', 'list', 'ver', 'off'])
 async def show_data(message: Message) -> None:
     global bot, TO_DEL, WALIST
     global work_path
 
     if not WhitelistCheck(str(message.from_user.id)):
         print(f'[!] Denied! {message.from_user.id}')
+        return None
+
+    if message.text == '/off':
+        await message.answer(text='Shutdow')
+        print('[*] Turned off by command')
+        sys.exit()
         return None
 
     if message.text == '/help':
@@ -219,11 +221,11 @@ async def callback_navigate(call:CallbackQuery) -> None:
     # todo круговой row
     # todo del
 
-    print(call)
     await to_del()
 
     if call.data == '/up':
         work_path = command_up(path=work_path, root=ROOT)
+        print('[^^]', work_path)
         FILE_ROW = 0
 
     elif call.data == '/next':
@@ -232,11 +234,10 @@ async def callback_navigate(call:CallbackQuery) -> None:
     else:
         CallbackPath = Path(CALLBACK_LIST_TEMP[int(call.data)])
         if CallbackPath.is_dir():
-            print(work_path)
-            print(CallbackPath)
             work_path = CallbackPath
+            print('[vv]', CallbackPath)
         elif CallbackPath.is_file():
-            print(CallbackPath.as_posix())
+            print('[=>]', CallbackPath.as_posix())
             await bot.send_document(chat_id=call.from_user.id,
                                     document=InputFile((CallbackPath.as_posix()))
                                     )
@@ -251,8 +252,8 @@ async def callback_navigate(call:CallbackQuery) -> None:
 
 
 
-async def main():
-    await dp.start_polling(bot)
+def main():
+    executor.start_polling(dp, skip_updates=True)
 
 
 if __name__ == '__main__':
@@ -265,6 +266,7 @@ if __name__ == '__main__':
     else:
         print(f'[*] Whitelist users {len(WALIST)}: {WALIST}')
 
-    asyncio.run(main())
+    # asyncio.run(main())
+    main()
 
     print('[*] Bot has stopped')
