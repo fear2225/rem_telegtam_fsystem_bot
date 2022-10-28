@@ -1,0 +1,181 @@
+Index: main.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>__version__ = '1.1.0'\r\n__author__ = 'SOV'\r\n__doc__ = '[*] Remote access to computer file system\\n'\\\r\n        '[!] if you try to enter directories with restricted access,'\\\r\n        'it may cause an error, go back to the /root directory'\\\r\n        'commands:\\n'\\\r\n        '/start - start with root dir & show user id\\n'\\\r\n        '/root - return to root dir\\n'\\\r\n        '/help - show this message'\\\r\n        'config:\\n'\\\r\n        '[!] for proper operation, it must be used by one user at a time\\n'\\\r\n        '[!] Do not change sequence of lines!!!\\n'\\\r\n        '[!] Var and data should be separated by \"=\" or \"= \"\\n'\\\r\n        '[!] Path example: \"root=C:\\\\Users\\\\\"\\n'\\\r\n        '[!] Whitelist should contain users id divided by \",\" or be blank\\n'\r\n\r\n\r\n# Internal\r\nimport asyncio\r\nfrom sys import exit\r\n\r\nfrom pathlib import Path\r\n\r\nfrom aiogram import Bot, Dispatcher, types\r\nfrom aiogram.types import Message, CallbackQuery\r\nfrom aiogram.types.input_file import InputFile\r\nfrom aiogram.types import InlineKeyboardMarkup as ilMarkup, InlineKeyboardButton as ilButton\r\n\r\n# External\r\n\r\n# ========================================\r\n\r\ndef config_unpack():\r\n    '''unpack clear param in the order of their declaration'''\r\n    _temp = []\r\n    with open('config.txt','r') as f:\r\n        for line in f:\r\n            _temp.append(line.strip().split(sep='=', maxsplit=1)[1])\r\n    return _temp\r\n\r\n# todo whitelist by user.id\r\n# Global parameters\r\nTOKEN, ROOT, FILE_NAME_WIDTH, N_BUTTONS, WALIST = config_unpack()\r\nROOT = Path(ROOT)\r\nFILE_NAME_WIDTH = int(FILE_NAME_WIDTH)\r\nN_BUTTONS = int(N_BUTTONS)\r\nwork_path = ROOT\r\nprint(f'token: {type(TOKEN)}, root: {ROOT}')\r\nTO_DEL = 0\r\nFILE_ROW = 0\r\nCALLBACK_LIST_TEMP = []\r\n\r\n\r\n# ========================================\r\n# Whitelist\r\ndef WhiteList() -> None:\r\n    global WALIST\r\n\r\n    if len(WALIST) == 0:\r\n        WALIST = False\r\n        return None\r\n\r\n    WALIST = WALIST.split(sep=',')\r\n    for i, _ in enumerate(WALIST):\r\n        WALIST[i] = WALIST[i].strip()\r\n        if not (len(WALIST[i]) == 10):\r\n            print('[!] Wrong parameters in whitelist')\r\n            exit()\r\n    return None\r\n\r\n\r\ndef WhitelistCheck(*args) -> bool:\r\n    global WALIST\r\n    if WALIST == False:\r\n        print('asfadf')\r\n        return True\r\n\r\n    if args in WALIST:\r\n        return True\r\n    return False\r\n\r\n\r\n# TODO сделать вывод всех файлов и папок\r\n# TODO без ебаного деления\r\n# ========================================\r\nbot = Bot(token=TOKEN)\r\ndp = Dispatcher(bot=bot)\r\n\r\n\r\n\r\ndef command_up(path:Path, root=ROOT) -> Path:\r\n    '''go to parent dierctory'''\r\n    if path == path.parent or path <= root:\r\n        return path\r\n    else:\r\n        return path.parent\r\n\r\n\r\ndef nameShorts(text:Path, max=20) -> list:\r\n    '''Shorts for telegram`s callback in InLineKeyboard'''\r\n    if max < 10:\r\n        max = 10\r\n\r\n    if len(text.name) <= max:\r\n        return [str(text.name),\r\n                str(text)]\r\n    else:\r\n        n = max//2\r\n        return [str(text.name)[:n-1] + '...' + str(text.name)[-(n-2):],\r\n                str(text)]\r\n\r\n\r\ndef list_dir(path:Path) -> list:\r\n    _temp = []\r\n    for i in path.iterdir():\r\n        _temp.append(i)\r\n    return _temp\r\n\r\n\r\ndef create_keyboard() -> ilMarkup:\r\n    global work_path, N_BUTTONS,  FILE_ROW, FILE_NAME_WIDTH\r\n    global CALLBACK_LIST_TEMP\r\n    keyboard = ilMarkup(row_width=1)\r\n    paths_to_show = list_dir(path=work_path)\r\n\r\n    # Store table of callback`s and path`s\r\n    CALLBACK_LIST_TEMP = []\r\n\r\n    ROW = len(paths_to_show)//N_BUTTONS\r\n    print(ROW, 'in', FILE_ROW)\r\n    if  (ROW - FILE_ROW) <= 0:\r\n        FILE_ROW = 0\r\n\r\n    poz = 0\r\n    if paths_to_show:\r\n\r\n        for i in paths_to_show[FILE_ROW*N_BUTTONS:(FILE_ROW+1)*N_BUTTONS]:\r\n            i = nameShorts(text=i, max=FILE_NAME_WIDTH)\r\n            print(i)\r\n            CALLBACK_LIST_TEMP.append(i[1])\r\n            keyboard.add(ilButton(text=i[0], callback_data=poz))\r\n            poz += 1\r\n\r\n\r\n        if (ROW-1) > 0:\r\n            keyboard.add(ilButton(text='next ==>', callback_data='/next'))\r\n\r\n    keyboard.add(ilButton(text='^^^ UP ^^^', callback_data='/up'))\r\n\r\n    print(keyboard)\r\n    return keyboard\r\n\r\n\r\nasync def to_del() -> None:\r\n    global bot, TO_DEL\r\n    # TODO не работает\r\n    chat_id:int = 0\r\n    if isinstance(TO_DEL, Message):\r\n        chat_id = TO_DEL['chat']['id']\r\n    elif isinstance(TO_DEL, CallbackQuery):\r\n        chat_id = TO_DEL['chat']['id']\r\n    elif isinstance(TO_DEL, int):\r\n        return None\r\n    else:\r\n        print('[!] Wrong TO_DEL type')\r\n        return None\r\n\r\n    try:\r\n        await bot.delete_message(chat_id=chat_id,\r\n                                message_id=TO_DEL.message_id)\r\n    except:\r\n        print(f'[!] Failed to delete message: {type(TO_DEL)}\\n{TO_DEL}')\r\n\r\n\r\n@dp.message_handler(commands=['start', 'root', 'help', 'list', 'ver'])\r\nasync def show_data(message: Message) -> None:\r\n    global bot, TO_DEL, WALIST\r\n    global work_path\r\n\r\n    if not WhitelistCheck(str(message.from_user.id)):\r\n        print(f'[!] Denied! {message.from_user.id}')\r\n        return None\r\n\r\n    if message.text == '/help':\r\n        await message.answer(text=__doc__)\r\n        return None\r\n\r\n    if message.text == '/ver':\r\n        await message.answer(text=__version__)\r\n        return None\r\n\r\n    await to_del()\r\n\r\n    reply_text = ''\r\n\r\n    if message.text == '/start':\r\n        reply_text = f'user: {message.from_user.id}\\n'\r\n\r\n    if message.text == '/root':\r\n        work_path = Path(Path.cwd())\r\n\r\n\r\n\r\n    if message.text == '/list':\r\n        reply_text += f'Whitelisted users: {WALIST}\\n'\r\n\r\n    # add keyboard\r\n    reply_text += f'path: {work_path}'\r\n\r\n    keyboard = create_keyboard()\r\n    TO_DEL = await message.answer(text=reply_text, reply_markup=keyboard)\r\n\r\n\r\n@dp.callback_query_handler()\r\nasync def callback_navigate(call:CallbackQuery) -> None:\r\n    global bot, TO_DEL\r\n    global work_path\r\n    global FILE_ROW\r\n    # todo круговой row\r\n    # todo del\r\n\r\n    print(call)\r\n    await to_del()\r\n\r\n    if call.data == '/up':\r\n        work_path = command_up(path=work_path, root=ROOT)\r\n        FILE_ROW = 0\r\n\r\n    elif call.data == '/next':\r\n        FILE_ROW += 1\r\n\r\n    else:\r\n        CallbackPath = Path(CALLBACK_LIST_TEMP[int(call.data)])\r\n        if CallbackPath.is_dir():\r\n            print(work_path)\r\n            print(CallbackPath)\r\n            work_path = CallbackPath\r\n        elif CallbackPath.is_file():\r\n            print(CallbackPath.as_posix())\r\n            await bot.send_document(chat_id=call.from_user.id,\r\n                                    document=InputFile((CallbackPath.as_posix()))\r\n                                    )\r\n        else:\r\n            print('Error file type')\r\n\r\n    keyboard = create_keyboard()\r\n    # todo error button linit 64 byte\r\n    TO_DEL = await bot.send_message(text=f'path: {work_path}',\r\n                                    chat_id=call.from_user.id,\r\n                                    reply_markup=keyboard)\r\n\r\n\r\n\r\nasync def main():\r\n    await dp.start_polling(bot)\r\n\r\n\r\nif __name__ == '__main__':\r\n    print('[*] Initialisation complete')\r\n    print(f'[*] Start path: {str(work_path)}')\r\n    print(f'[*] Root path: {str(ROOT)}')\r\n    WhiteList()\r\n    if not WALIST:\r\n        print(f'[*] Whitelist enable :{WALIST}')\r\n    else:\r\n        print(f'[*] Whitelist users {len(WALIST)}: {WALIST}')\r\n\r\n    asyncio.run(main())\r\n\r\n    print('[*] Bot has stopped')\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main.py b/main.py
+--- a/main.py	(revision 28264df78c6768ebee93bbfe098d6a42cad95689)
++++ b/main.py	(date 1666959604279)
+@@ -1,5 +1,5 @@
+-__version__ = '1.1.0'
+-__author__ = 'SOV'
++__version__ = '1.2.0'
++__author__ = 'https://github.com/fear2225'
+ __doc__ = '[*] Remote access to computer file system\n'\
+         '[!] if you try to enter directories with restricted access,'\
+         'it may cause an error, go back to the /root directory'\
+@@ -17,11 +17,11 @@
+ 
+ # Internal
+ import asyncio
+-from sys import exit
++import sys
+ 
+ from pathlib import Path
+ 
+-from aiogram import Bot, Dispatcher, types
++from aiogram import Bot, Dispatcher, types, executor
+ from aiogram.types import Message, CallbackQuery
+ from aiogram.types.input_file import InputFile
+ from aiogram.types import InlineKeyboardMarkup as ilMarkup, InlineKeyboardButton as ilButton
+@@ -32,20 +32,20 @@
+ 
+ def config_unpack():
+     '''unpack clear param in the order of their declaration'''
++    print(f'[*] main.py location: {sys.argv[0]}')
+     _temp = []
+-    with open('config.txt','r') as f:
++    with open(sys.argv[0][0:-7]+'config.txt','r') as f:
+         for line in f:
+             _temp.append(line.strip().split(sep='=', maxsplit=1)[1])
+     return _temp
+ 
+-# todo whitelist by user.id
++
+ # Global parameters
+ TOKEN, ROOT, FILE_NAME_WIDTH, N_BUTTONS, WALIST = config_unpack()
+ ROOT = Path(ROOT)
+ FILE_NAME_WIDTH = int(FILE_NAME_WIDTH)
+ N_BUTTONS = int(N_BUTTONS)
+ work_path = ROOT
+-print(f'token: {type(TOKEN)}, root: {ROOT}')
+ TO_DEL = 0
+ FILE_ROW = 0
+ CALLBACK_LIST_TEMP = []
+@@ -65,14 +65,13 @@
+         WALIST[i] = WALIST[i].strip()
+         if not (len(WALIST[i]) == 10):
+             print('[!] Wrong parameters in whitelist')
+-            exit()
++            sys.exit()
+     return None
+ 
+ 
+ def WhitelistCheck(*args) -> bool:
+     global WALIST
+     if WALIST == False:
+-        print('asfadf')
+         return True
+ 
+     if args in WALIST:
+@@ -80,14 +79,11 @@
+     return False
+ 
+ 
+-# TODO сделать вывод всех файлов и папок
+-# TODO без ебаного деления
+ # ========================================
+ bot = Bot(token=TOKEN)
+ dp = Dispatcher(bot=bot)
+ 
+ 
+-
+ def command_up(path:Path, root=ROOT) -> Path:
+     '''go to parent dierctory'''
+     if path == path.parent or path <= root:
+@@ -127,7 +123,6 @@
+     CALLBACK_LIST_TEMP = []
+ 
+     ROW = len(paths_to_show)//N_BUTTONS
+-    print(ROW, 'in', FILE_ROW)
+     if  (ROW - FILE_ROW) <= 0:
+         FILE_ROW = 0
+ 
+@@ -136,7 +131,6 @@
+ 
+         for i in paths_to_show[FILE_ROW*N_BUTTONS:(FILE_ROW+1)*N_BUTTONS]:
+             i = nameShorts(text=i, max=FILE_NAME_WIDTH)
+-            print(i)
+             CALLBACK_LIST_TEMP.append(i[1])
+             keyboard.add(ilButton(text=i[0], callback_data=poz))
+             poz += 1
+@@ -146,8 +140,6 @@
+             keyboard.add(ilButton(text='next ==>', callback_data='/next'))
+ 
+     keyboard.add(ilButton(text='^^^ UP ^^^', callback_data='/up'))
+-
+-    print(keyboard)
+     return keyboard
+ 
+ 
+@@ -172,7 +164,7 @@
+         print(f'[!] Failed to delete message: {type(TO_DEL)}\n{TO_DEL}')
+ 
+ 
+-@dp.message_handler(commands=['start', 'root', 'help', 'list', 'ver'])
++@dp.message_handler(commands=['start', 'root', 'help', 'list', 'ver', 'off'])
+ async def show_data(message: Message) -> None:
+     global bot, TO_DEL, WALIST
+     global work_path
+@@ -181,6 +173,12 @@
+         print(f'[!] Denied! {message.from_user.id}')
+         return None
+ 
++    if message.text == '/off':
++        await message.answer(text='Shutdow')
++        print('[*] Turned off by command')
++        sys.exit()
++        return None
++
+     if message.text == '/help':
+         await message.answer(text=__doc__)
+         return None
+@@ -219,11 +217,11 @@
+     # todo круговой row
+     # todo del
+ 
+-    print(call)
+     await to_del()
+ 
+     if call.data == '/up':
+         work_path = command_up(path=work_path, root=ROOT)
++        print('[^^]', work_path)
+         FILE_ROW = 0
+ 
+     elif call.data == '/next':
+@@ -232,11 +230,10 @@
+     else:
+         CallbackPath = Path(CALLBACK_LIST_TEMP[int(call.data)])
+         if CallbackPath.is_dir():
+-            print(work_path)
+-            print(CallbackPath)
+             work_path = CallbackPath
++            print('[vv]', CallbackPath)
+         elif CallbackPath.is_file():
+-            print(CallbackPath.as_posix())
++            print('[=>]', CallbackPath.as_posix())
+             await bot.send_document(chat_id=call.from_user.id,
+                                     document=InputFile((CallbackPath.as_posix()))
+                                     )
+@@ -251,8 +248,8 @@
+ 
+ 
+ 
+-async def main():
+-    await dp.start_polling(bot)
++def main():
++    executor.start_polling(dp, skip_updates=True)
+ 
+ 
+ if __name__ == '__main__':
+@@ -265,6 +262,7 @@
+     else:
+         print(f'[*] Whitelist users {len(WALIST)}: {WALIST}')
+ 
+-    asyncio.run(main())
++    # asyncio.run(main())
++    main()
+ 
+     print('[*] Bot has stopped')
