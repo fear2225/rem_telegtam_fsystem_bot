@@ -63,8 +63,9 @@ def WhiteList() -> None:
     WALIST = WALIST.split(sep=',')
     for i, _ in enumerate(WALIST):
         WALIST[i] = WALIST[i].strip()
-        if not (len(WALIST[i]) <= 12):
+        if (len(WALIST[i]) < 5):
             print('[!] Wrong parameters in whitelist')
+            print(WALIST)
             sys.exit()
     return None
 
