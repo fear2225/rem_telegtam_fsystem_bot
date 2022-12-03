@@ -81,7 +81,6 @@ def WhitelistCheck(*args) -> bool:
 
 
 # TODO сделать вывод всех файлов и папок
-# TODO без ебаного деления
 # ========================================
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot=bot)
